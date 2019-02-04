@@ -146,6 +146,7 @@ def question_mark(x):
     new_nfa.create_transition(x.final_state, [new_final_state], " ")
     return new_nfa
 
+#compare precdence of two operators
 def compare_precedence(x, y):
     left = 0
     right = 0
@@ -178,40 +179,43 @@ def infix_to_postfix(infix):
     postfix = ""
     stack = []
     for c in infix:
+        #if it is an operand, add it directly to postfix string
         if not (c == "*" or c == "+" or c == "?" or c == "." or c == "|" or c == "(" or c == ")"):
             postfix += c
-        else:
-            if len(stack)== 0 or stack[len(stack)-1]=="(":
-                stack.append(c)
-            else:
-                if c == "(":
-                    stack.append(c)
-                else:
-                    if c == ")":
-                        while(not (stack[len(stack)-1] == "(")):
-                            popped = stack[len(stack)-1]
-                            postfix += popped
-                            stack = stack[:len(stack)-1]
-                        stack = stack[:len(stack)-1]
-                    else:
-                        if compare_precedence(c, stack[len(stack)-1]) > 0:
-                            stack.append(c)
-                        else:
-                            if compare_precedence(c, stack[len(stack)-1]) == 0:
-                                popped = stack[len(stack)-1]
-                                postfix += popped
-                                stack[len(stack)-1] = c
-                            else:
-                                if compare_precedence(c, stack[len(stack)-1]) < 0:
-                                    while (len(stack) > 0) and not (stack[len(stack)-1] == "(") and (compare_precedence(c, stack[len(stack)-1]) < 0):
-                                        popped = stack[len(stack)-1]
-                                        postfix += popped
-                                        stack = stack[:len(stack)-1]
-                                    if len(stack) > 0 and not (stack[len(stack)-1] == "(") and (compare_precedence(c, stack[len(stack) - 1]) == 0):
-                                        popped = stack[len(stack) - 1]
-                                        postfix += popped
-                                        stack = stack[: len(stack) - 1]
-                                    stack.append(c)
+        #if stack is empty or top is ( , print it to postfix string
+        elif len(stack)== 0 or stack[len(stack)-1]=="(":
+            stack.append(c)
+        #if left bracket, push it on stack
+        elif c == "(":
+            stack.append(c)
+        #if ) pop until you find (
+        elif c == ")":
+            while(not (stack[len(stack)-1] == "(")):
+                popped = stack[len(stack)-1]
+                postfix += popped
+                stack = stack[:len(stack)-1]
+            stack = stack[:len(stack)-1]
+        #if c has higher precedence than top of stack, push it on top of stack
+        elif compare_precedence(c, stack[len(stack)-1]) > 0:
+            stack.append(c)
+        #if equal precedence, pop one element from stack and push c
+        elif compare_precedence(c, stack[len(stack)-1]) == 0:
+            popped = stack[len(stack)-1]
+            postfix += popped
+            stack[len(stack)-1] = c
+        #if lower precedence, pop and print until otherwise
+        elif compare_precedence(c, stack[len(stack)-1]) < 0:
+            while (len(stack) > 0) and not (stack[len(stack)-1] == "(") and (compare_precedence(c, stack[len(stack)-1]) < 0):
+                popped = stack[len(stack)-1]
+                postfix += popped
+                stack = stack[:len(stack)-1]
+            if len(stack) > 0 and not (stack[len(stack)-1] == "(") and (compare_precedence(c, stack[len(stack) - 1]) == 0):
+                popped = stack[len(stack) - 1]
+                postfix += popped
+                stack = stack[: len(stack) - 1]
+            stack.append(c)
+
+    #if infix string is over, pop all stack and print it to postix
     while(not (len(stack) == 0)):
         popped = stack[len(stack)-1]
         postfix += popped
@@ -223,13 +227,18 @@ def infix_to_postfix(infix):
 def modifyRegex(regex):
     index = 0
     while index < len(regex):
+        #replace all epsilons with spaces
         regex = regex.replace("ε", " ")
+        #add . as concatenation operator in all the needed locations
         if index > 0 and not (regex[index] == ")" or regex[index-1] == "(" or regex[index-1] == "|" or regex[index] == "|" or regex[index] == "*" or regex[index] == "+" or regex[index] == "?"):
             regex = regex[0:index] + "." + regex[index:]
             index +=1
         index += 1
     return regex
 
+#continuously parse the postfix string until it is finished
+#everytime you parse an operator, pop 1 or 2 operands (depending on the operator),
+# perform the operation and push it on top of stack
 def transformToNFA(postfix):
     global alphabet
     stack = []
@@ -240,35 +249,31 @@ def transformToNFA(postfix):
             stack = stack[:len(stack) - 2]
             z = concat(x, y)
             stack.append(z)
+        elif c == "|":
+            x = stack[len(stack) - 2]
+            y = stack[len(stack) - 1]
+            stack = stack[:len(stack) - 2]
+            z = union(x, y)
+            stack.append(z)
+        elif c == "*":
+            x = stack[len(stack) - 1]
+            stack = stack[:len(stack) - 1]
+            z = kleene(x)
+            stack.append(z)
+        elif c == "+":
+            x = stack[len(stack) - 1]
+            stack = stack[:len(stack) - 1]
+            z = plus(x)
+            stack.append(z)
+        elif c == "?":
+            x = stack[len(stack) - 1]
+            stack = stack[:len(stack) - 1]
+            z = question_mark(x)
+            stack.append(z)
         else:
-            if c == "|":
-                x = stack[len(stack) - 2]
-                y = stack[len(stack) - 1]
-                stack = stack[:len(stack) - 2]
-                z = union(x, y)
-                stack.append(z)
-            else:
-                if c == "*":
-                    x = stack[len(stack) - 1]
-                    stack = stack[:len(stack) - 1]
-                    z = kleene(x)
-                    stack.append(z)
-                else:
-                    if c == "+":
-                        x = stack[len(stack) - 1]
-                        stack = stack[:len(stack) - 1]
-                        z = plus(x)
-                        stack.append(z)
-                    else:
-                        if c == "?":
-                            x = stack[len(stack) - 1]
-                            stack = stack[:len(stack) - 1]
-                            z = question_mark(x)
-                            stack.append(z)
-                        else:
-                            alphabet.append(c)
-                            x = one_action(c)
-                            stack.append(x)
+            alphabet.append(c)
+            x = one_action(c)
+            stack.append(x)
     return stack
 
 #-------------------RUN CODE----------------------
