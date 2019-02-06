@@ -12,7 +12,7 @@ if __name__ == '__main__':
 
     print(args.file)
 
-    regex = re.compile("((?<=(=)).)")
+    regex = re.compile("((?<=(=))[0-9])")
     output_file = open("task_1_5_result.txt", "w+")
 
     with open(args.file, "r") as file:

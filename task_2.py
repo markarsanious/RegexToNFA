@@ -80,12 +80,24 @@ def resolve_duplicate_states(x, old_y):
 
 def concat(x, y):
     x, new_y = resolve_duplicate_states(x, y)
-    new_nfa = NFA(x.initial_state, new_y.final_state, x.states + new_y.states, [])
-    for x_transition in x.transitions:
+    new_x = NFA(x.initial_state, new_y.initial_state, [], [])
+    new_x.states = [state for state in x.states]
+    new_x.states.remove(x.final_state)
+    new_x.transitions = x.transitions.copy()
+
+    for i, transition in enumerate(new_x.transitions):
+        if new_x.transitions[i]['from_state'] == x.final_state:
+            new_x.transitions[i]['from_state'] = new_y.initial_state
+        for j, to_state in enumerate(new_x.transitions[i]['to_states']):
+            if new_x.transitions[i]['to_states'][j] == x.final_state:
+                new_x.transitions[i]['to_states'][j] = new_y.initial_state
+
+    new_nfa = NFA(new_x.initial_state, new_y.final_state, new_x.states + new_y.states, [])
+    for x_transition in new_x.transitions:
         new_nfa.create_transition(x_transition['from_state'], x_transition['to_states'], x_transition['condition'])
     for y_transition in new_y.transitions:
         new_nfa.create_transition(y_transition['from_state'], y_transition['to_states'], y_transition['condition'])
-    new_nfa.create_transition(x.final_state, [new_y.initial_state], " ")
+    # new_nfa.create_transition(x.final_state, [new_y.initial_state], " ")
     return new_nfa
 
 def union(x, y):
@@ -280,27 +292,35 @@ def transformToNFA(postfix):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(add_help=True, description='Sample Commandline')
 
-    # parser.add_argument('--file', action="store", help="path of file to take as input", nargs="?",
-    #                     metavar="file")
+    parser.add_argument('--file', action="store", help="path of file to take as input", nargs="?",
+                        metavar="file")
 
-    # args = parser.parse_args()
+    args = parser.parse_args()
+    print(args.file)
 
-    #initialize global variables
-    states_counter = 0
-    alphabet = []
-
-    #input regex, modify it to replace epsilon with space and add "." to represent concatenation
-    #then, transform the infix notation to postfix and run the code to transform it to NFA
-    regex = "(0|(1(01*(00)*0)*1)*)*"
-    regex = modifyRegex(regex)
-    postfix = infix_to_postfix(regex)
-    stack = transformToNFA(postfix)
-    stack[0].display()
-
-    #write the output of the result NFA in the output file with the specified format
     output_file = open("task_2_result.txt", "w+")
-    output_file.write(",".join(stack[0].states)+"\n")
-    output_file.write(",".join(set(alphabet))+"\n")
-    output_file.write(stack[0].initial_state+"\n")
-    output_file.write(stack[0].final_state+"\n")
-    output_file.write(stack[0].display_transitions()+"\n")
+
+    with open(args.file, "r") as file:
+        for line in file:
+            # initialize global variables
+            regex = line
+            states_counter = 0
+            alphabet = []
+
+            # input regex, modify it to replace epsilon with space and add "." to represent concatenation
+            # then, transform the infix notation to postfix and run the code to transform it to NFA
+            # regex = "(0|(1(01*(00)*0)*1)*)*"
+            regex = modifyRegex(regex)
+            postfix = infix_to_postfix(regex)
+            stack = transformToNFA(postfix)
+            # stack[0].display()
+
+            # write the output of the result NFA in the output file with the specified format
+            output_file.write(",".join(stack[0].states) + "\n")
+            output_file.write(",".join(set(alphabet)) + "\n")
+            output_file.write(stack[0].initial_state + "\n")
+            output_file.write(stack[0].final_state + "\n")
+            output_file.write(stack[0].display_transitions() + "\n")
+            output_file.write("\n")
+
+
